@@ -68,26 +68,21 @@ class EChartService extends Service {
         }
     }
 
-    private async load() {
+    public async start() {
         const skia = await this.ctx.node.safeImport<typeof skia>('@willbot-koishi/skia-canvas')
         this.skia = skia
         this.oldImage = global.Image
         global.Image = skia.Image
-        return true
     }
 
-    constructor(ctx: Context, public config: EChartService.Config) {
+    public constructor(ctx: Context, public config: EChartService.Config) {
         super(ctx, 'echarts')
-
-        this.loaded = this.load()
 
         this.ctx.on('dispose', () => {
             global.Image = this.oldImage
         })
 
         this.ctx.command('echarts', 'ECharts 服务')
-        this.ctx.command('echarts.stat', '查询 ECharts 服务加载情况')
-            .action(async () => `loaded: ${await Promise.race([ this.loaded, Promise.resolve(false) ])}`)
     }
 }
 
