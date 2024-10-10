@@ -1,7 +1,7 @@
-import { h, Context, Schema, Service } from 'koishi'
+import { h, Context, z, Service } from 'koishi'
 import * as echarts from 'echarts'
 
-import { skia } from 'koishi-plugin-skia-canvas'
+import { type Canvas } from '@ltxhhz/koishi-plugin-skia-canvas'
 
 export const name = 'w-echarts'
 
@@ -13,7 +13,7 @@ declare module 'koishi' {
 
 export type EChartHandler = {
     chart: echarts.ECharts
-    canvas: skia.Canvas
+    canvas: Canvas
     dispose: () => void
     export: (timeout?: number) => Promise<h>
 }
@@ -30,18 +30,18 @@ type RemoveIndex<T> = {
 export type StrictEChartsOption = RemoveIndex<echarts.EChartsOption>
 
 class EChartService extends Service {
-    static readonly inject = [ 'canvas' ]
+    static readonly inject = [ 'skia' ]
 
     public createChart<Strict extends boolean = false>(
         width: number,
         height: number,
         options: Strict extends true ? StrictEChartsOption : echarts.EChartsOption
     ): EChartHandler {
-        const canvas = this.ctx.canvas.createCanvas(width, height)
+        const canvas = new this.ctx.skia.Canvas(width, height)
         const chart = echarts.init(canvas as any)
         chart.setOption({
             textStyle: {
-                fontFamily: this.ctx.canvas.getPresetFont()
+                fontFamily: this.config.font
             },
             ...options
         })
@@ -54,21 +54,27 @@ class EChartService extends Service {
                     chart.on('finished', () => res())
                     setTimeout(() => res(), timeout)
                 })
-                const el = h.image(canvas.toBuffer('image/png'), 'image/png')
+                const el = h.image(await canvas.toBuffer('png'), 'image/png')
                 chart.dispose()
                 return el
             }
         }
     }
 
-    constructor(ctx: Context) {
+
+    constructor(ctx: Context, public config: EChartService.Config) {
         super(ctx, 'echarts')
+        global.Image = ctx.skia.Image
     }
 }
 
 namespace EChartService {
-    export interface Config {}
-    export const Config: Schema<Config> = Schema.object({})
+    export interface Config {
+        font: string
+    }
+    export const Config: z<Config> = z.object({
+        font: z.string().default('sans').description('ECharts 使用的字体')
+    })
 }
 
 export default EChartService
