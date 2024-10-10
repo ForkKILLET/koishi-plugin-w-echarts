@@ -1,7 +1,9 @@
 import { h, Context, z, Service } from 'koishi'
+import {} from 'koishi-plugin-w-node'
+
+import type skia from '@willbot-koishi/skia-canvas'
 import * as echarts from 'echarts'
 
-import { type Canvas } from '@ltxhhz/koishi-plugin-skia-canvas'
 
 export const name = 'w-echarts'
 
@@ -13,7 +15,7 @@ declare module 'koishi' {
 
 export type EChartHandler = {
     chart: echarts.ECharts
-    canvas: Canvas
+    canvas: skia.Canvas
     dispose: () => void
     export: (timeout?: number) => Promise<h>
 }
@@ -30,14 +32,19 @@ type RemoveIndex<T> = {
 export type StrictEChartsOption = RemoveIndex<echarts.EChartsOption>
 
 class EChartService extends Service {
-    static readonly inject = [ 'skia' ]
+    static readonly inject = [ 'node' ]
+
+    public loaded: Promise<boolean>
+    public skia: typeof skia
+
+    private oldImage: typeof Image
 
     public createChart<Strict extends boolean = false>(
         width: number,
         height: number,
         options: Strict extends true ? StrictEChartsOption : echarts.EChartsOption
     ): EChartHandler {
-        const canvas = new this.ctx.skia.Canvas(width, height)
+        const canvas = new this.skia.Canvas(width, height)
         const chart = echarts.init(canvas as any)
         chart.setOption({
             textStyle: {
@@ -61,10 +68,26 @@ class EChartService extends Service {
         }
     }
 
+    private async load() {
+        const skia = await this.ctx.node.safeImport<typeof skia>('@willbot-koishi/skia-canvas')
+        this.skia = skia
+        this.oldImage = global.Image
+        global.Image = skia.Image
+        return true
+    }
 
     constructor(ctx: Context, public config: EChartService.Config) {
         super(ctx, 'echarts')
-        global.Image = ctx.skia.Image
+
+        this.loaded = this.load()
+
+        this.ctx.on('dispose', () => {
+            global.Image = this.oldImage
+        })
+
+        this.ctx.command('echarts', 'ECharts 服务')
+        this.ctx.command('echarts.stat', '查询 ECharts 服务加载情况')
+            .action(async () => `loaded: ${await Promise.race([ this.loaded, Promise.resolve(false) ])}`)
     }
 }
 
