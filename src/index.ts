@@ -1,9 +1,8 @@
 import { h, Context, z, Service } from 'koishi'
-import {} from 'koishi-plugin-w-node'
+import {} from 'koishi-plugin-w-canvas'
 
 import type skia from '@willbot-koishi/skia-canvas'
 import * as echarts from 'echarts'
-
 
 export const name = 'w-echarts'
 
@@ -32,19 +31,14 @@ type RemoveIndex<T> = {
 export type StrictEChartsOption = RemoveIndex<echarts.EChartsOption>
 
 class EChartService extends Service {
-    static readonly inject = [ 'node' ]
-
-    public loaded: Promise<boolean>
-    public skia: typeof skia
-
-    private oldImage: typeof Image
+    static readonly inject = [ 'canvas' ]
 
     public createChart<Strict extends boolean = false>(
         width: number,
         height: number,
         options: Strict extends true ? StrictEChartsOption : echarts.EChartsOption
     ): EChartHandler {
-        const canvas = new this.skia.Canvas(width, height)
+        const canvas = new this.ctx.canvas.skia.Canvas(width, height)
         const chart = echarts.init(canvas as any)
         chart.setOption({
             textStyle: {
@@ -68,19 +62,8 @@ class EChartService extends Service {
         }
     }
 
-    public async start() {
-        const skia = await this.ctx.node.safeImport<typeof skia>('@willbot-koishi/skia-canvas')
-        this.skia = skia
-        this.oldImage = global.Image
-        global.Image = skia.Image
-    }
-
     public constructor(ctx: Context, public config: EChartService.Config) {
         super(ctx, 'echarts')
-
-        this.ctx.on('dispose', () => {
-            global.Image = this.oldImage
-        })
 
         this.ctx.command('echarts', 'ECharts 服务')
     }

@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-w-echarts",
   "description": "WillBot: ECharts service",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
@@ -18,7 +18,15 @@
     "koishi": "^4.18.0"
   },
   "dependencies": {
-    "echarts": "^5.5.1"
+    "echarts": "^5.5.1",
+    "koishi-plugin-w-canvas": "workspace:^"
+  },
+  "koishi": {
+    "service": {
+      "required": [
+        "canvas"
+      ]
+    }
   },
   "scripts": {
     "build": "yarn workspace willbot build w-echarts",
@@ -26,7 +34,6 @@
     "pub": "yarn workspace willbot pub w-echarts"
   },
   "devDependencies": {
-    "@willbot-koishi/skia-canvas": "^1.0.3-alpha",
-    "koishi-plugin-w-node": "workspace:^"
+    "@willbot-koishi/skia-canvas": "^1.0.3-alpha"
   }
 }
